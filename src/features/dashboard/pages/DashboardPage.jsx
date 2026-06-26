@@ -296,7 +296,11 @@ export default function DashboardPage({ session }) {
                         <span className="case-date">{formatDate(item.created_at)}</span>
                       </div>
                       <h3>{item.title}</h3>
-                      <p className="case-description">{item.description}</p>
+                      {item.description && item.description.replace(/\./g, '').trim().length > 0 ? (
+                        <p className="case-description">{item.description}</p>
+                      ) : (
+                        <p className="case-description" style={{ fontStyle: 'italic', color: '#9ca3af' }}>Sin descripción adicional</p>
+                      )}
                       {item.category && (
                         <span className="case-category">{item.category}</span>
                       )}
@@ -319,9 +323,9 @@ export default function DashboardPage({ session }) {
           </>
         ) : activeView === 'explorar' ? (
           <section className="explore-cases">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
               <h2>Explorar Casos</h2>
-              <div className="search-bar" style={{ display: 'flex', gap: '10px', width: '300px' }}>
+              <div className="search-bar" style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '300px' }}>
                 <input
                   type="text"
                   placeholder="Buscar por título o descripción..."
@@ -361,7 +365,11 @@ export default function DashboardPage({ session }) {
                       <span className="case-date">{formatDate(item.created_at)}</span>
                     </div>
                     <h3>{item.title}</h3>
-                    <p className="case-description">{item.description}</p>
+                    {item.description && item.description.replace(/\./g, '').trim().length > 0 ? (
+                      <p className="case-description">{item.description}</p>
+                    ) : (
+                      <p className="case-description" style={{ fontStyle: 'italic', color: '#9ca3af' }}>Sin descripción adicional</p>
+                    )}
                     {item.category && (
                       <span className="case-category">{item.category}</span>
                     )}
@@ -405,7 +413,11 @@ export default function DashboardPage({ session }) {
                       <span className="case-date">{formatDate(item.created_at)}</span>
                     </div>
                     <h3>{item.title}</h3>
-                    <p className="case-description">{item.description}</p>
+                    {item.description && item.description.replace(/\./g, '').trim().length > 0 ? (
+                      <p className="case-description">{item.description}</p>
+                    ) : (
+                      <p className="case-description" style={{ fontStyle: 'italic', color: '#9ca3af' }}>Sin descripción adicional</p>
+                    )}
                     {item.category && (
                       <span className="case-category">{item.category}</span>
                     )}
