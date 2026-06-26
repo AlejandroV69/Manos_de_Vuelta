@@ -1,25 +1,102 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { HeartPulse, ArrowRight, UserPlus, LogIn } from 'lucide-react';
+import { HeartPulse, ArrowRight, UserPlus, LogIn, AlertCircle, Loader2 } from 'lucide-react';
+import { supabase } from '../../../services/supabaseClient';
+
+const ESTADOS_VENEZUELA = [
+  'Amazonas', 'Anzoátegui', 'Apure', 'Aragua', 'Barinas', 'Bolívar',
+  'Carabobo', 'Cojedes', 'Delta Amacuro', 'Falcón', 'Guárico', 'Lara',
+  'Mérida', 'Miranda', 'Monagas', 'Nueva Esparta', 'Portuguesa', 'Sucre',
+  'Táchira', 'Trujillo', 'Vargas', 'Yaracuy', 'Zulia',
+  'Distrito Capital', 'Dependencias Federales'
+];
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    phone_number: '',
+    state: '',
+    municipality: '',
+  });
+
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check if we navigated here with a specific tab intention (e.g. from Hero CTAs)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('tab') === 'login') {
-      setIsLogin(true);
-    } else if (params.get('tab') === 'register') {
-      setIsLogin(false);
-    }
+    if (params.get('tab') === 'login') setIsLogin(true);
+    else if (params.get('tab') === 'register') setIsLogin(false);
   }, [location]);
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+    setError('');
+  };
+
+  const handleTabChange = (loginMode) => {
+    setIsLogin(loginMode);
+    setError('');
+  };
+
+  const handleRegister = async (e) => {
     e.preventDefault();
-    // Simulate auth success and redirect to dashboard
+    setLoading(true);
+    setError('');
+
+    const { full_name, email, password, phone_number, state, municipality } = formData;
+
+    // 1. Crear usuario en Supabase Auth
+    const { data, error: authError } = await supabase.auth.signUp({ email, password });
+
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    // 2. Insertar (o actualizar si ya existe) el perfil en la tabla `profiles`
+    if (data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: data.user.id,
+          full_name,
+          phone_number,
+          state,
+          municipality,
+        }, { onConflict: 'id' });
+
+      if (profileError) {
+        setError('Cuenta creada, pero hubo un error al guardar tu perfil. Puedes actualizarlo más tarde.');
+      }
+    }
+
+    setLoading(false);
+    navigate('/dashboard');
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    const { email, password } = formData;
+
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (authError) {
+      setError('Correo o contraseña incorrectos. Inténtalo de nuevo.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(false);
     navigate('/dashboard');
   };
 
@@ -37,57 +114,125 @@ export default function AuthPage() {
           <div className="auth-header">
             <h2>{isLogin ? 'Bienvenido de vuelta' : 'Únete a la comunidad'}</h2>
             <p>
-              {isLogin 
-                ? 'Inicia sesión para continuar ayudando.' 
+              {isLogin
+                ? 'Inicia sesión para continuar ayudando.'
                 : 'Crea tu cuenta para solicitar o donar insumos.'}
             </p>
           </div>
 
           <div className="auth-toggle">
-            <button 
-              className={`toggle-btn ${!isLogin ? 'active' : ''}`}
-              onClick={() => setIsLogin(false)}
-            >
+            <button className={`toggle-btn ${!isLogin ? 'active' : ''}`} onClick={() => handleTabChange(false)}>
               <UserPlus size={18} />
               Registro
             </button>
-            <button 
-              className={`toggle-btn ${isLogin ? 'active' : ''}`}
-              onClick={() => setIsLogin(true)}
-            >
+            <button className={`toggle-btn ${isLogin ? 'active' : ''}`} onClick={() => handleTabChange(true)}>
               <LogIn size={18} />
               Iniciar Sesión
             </button>
           </div>
 
-          <form className="auth-form" onSubmit={handleSubmit}>
+          {error && (
+            <div className="auth-error">
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form className="auth-form" onSubmit={isLogin ? handleLogin : handleRegister}>
             {!isLogin && (
               <div className="form-group">
-                <label htmlFor="name">Nombre completo</label>
-                <input type="text" id="name" placeholder="Ej. Carlos Pérez" required />
+                <label htmlFor="full_name">Nombre completo</label>
+                <input
+                  type="text"
+                  id="full_name"
+                  placeholder="Ej. Carlos Pérez"
+                  value={formData.full_name}
+                  onChange={handleChange}
+                  required
+                />
               </div>
             )}
-            
+
             <div className="form-group">
               <label htmlFor="email">Correo electrónico</label>
-              <input type="email" id="email" placeholder="tu@correo.com" required />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="password">Contraseña</label>
-              <input type="password" id="password" placeholder="••••••••" required />
+              <input
+                type="email"
+                id="email"
+                placeholder="tu@correo.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
             </div>
 
-            <button type="submit" className="auth-submit-btn">
-              {isLogin ? 'Entrar' : 'Crear cuenta'}
-              <ArrowRight size={20} />
+            <div className="form-group">
+              <label htmlFor="password">Contraseña</label>
+              <input
+                type="password"
+                id="password"
+                placeholder="Mínimo 6 caracteres"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                minLength={6}
+              />
+            </div>
+
+            {!isLogin && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="phone_number">Número de teléfono</label>
+                  <input
+                    type="tel"
+                    id="phone_number"
+                    placeholder="Ej. 0412-1234567"
+                    value={formData.phone_number}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="state">Estado</label>
+                    <select
+                      id="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Seleccionar...</option>
+                      {ESTADOS_VENEZUELA.map((est) => (
+                        <option key={est} value={est}>{est}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="municipality">Municipio</label>
+                    <input
+                      type="text"
+                      id="municipality"
+                      placeholder="Tu municipio"
+                      value={formData.municipality}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <button type="submit" className="auth-submit-btn" disabled={loading}>
+              {loading
+                ? <><Loader2 size={20} className="spin" /> Procesando...</>
+                : <>{isLogin ? 'Entrar' : 'Crear cuenta'} <ArrowRight size={20} /></>
+              }
             </button>
           </form>
-          
+
           <div className="auth-footer">
-            <p>
-              Al {isLogin ? 'iniciar sesión' : 'registrarte'}, aceptas nuestros términos y condiciones de uso para esta plataforma solidaria.
-            </p>
+            <p>Al {isLogin ? 'iniciar sesión' : 'registrarte'}, aceptas nuestros términos de uso para esta plataforma solidaria.</p>
           </div>
         </div>
       </div>
