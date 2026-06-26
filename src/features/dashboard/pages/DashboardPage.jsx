@@ -30,7 +30,7 @@ export default function DashboardPage({ session }) {
   const [supplies, setSupplies] = useState([]);
   const [loadingSupplies, setLoadingSupplies] = useState(true);
   const [profile, setProfile] = useState(null);
-  
+
   // Navigation state
   const [activeView, setActiveView] = useState('inicio'); // 'inicio' | 'explorar' | 'mis-publicaciones'
   const [searchTerm, setSearchTerm] = useState('');
@@ -145,7 +145,7 @@ export default function DashboardPage({ session }) {
     } else if (!phone.startsWith('58')) {
       phone = '58' + phone;
     }
-    let text = item.type === 'solicitud' 
+    let text = item.type === 'solicitud'
       ? `Hola, vi tu solicitud de "${item.title}" en Manos de Vuelta. Quiero ayudar.`
       : `Hola, vi tu donacion de "${item.title}" en Manos de Vuelta. Me interesa.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
@@ -468,7 +468,7 @@ export default function DashboardPage({ session }) {
 
             <form className="auth-form" onSubmit={handleSubmit}>
               <div className="form-group">
-                <label htmlFor="title">Título</label>
+                <label htmlFor="title">Producto</label>
                 <input
                   id="title" type="text"
                   placeholder={modalType === 'need' ? 'Ej. Losartán 50mg' : 'Ej. Silla de ruedas'}
