@@ -138,10 +138,16 @@ export default function DashboardPage({ session }) {
       alert('Este usuario no tiene un número de teléfono registrado.');
       return;
     }
-    const phone = item.profile.phone_number.replace(/\D/g, '');
+    let phone = item.profile.phone_number.replace(/\D/g, '');
+    // Convertir formato local venezolano (0412...) a internacional (58412...)
+    if (phone.startsWith('0')) {
+      phone = '58' + phone.substring(1);
+    } else if (!phone.startsWith('58')) {
+      phone = '58' + phone;
+    }
     let text = item.type === 'solicitud' 
       ? `Hola, vi tu solicitud de "${item.title}" en Manos de Vuelta. Quiero ayudar.`
-      : `Hola, vi tu donación de "${item.title}" en Manos de Vuelta. Me interesa.`;
+      : `Hola, vi tu donacion de "${item.title}" en Manos de Vuelta. Me interesa.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
