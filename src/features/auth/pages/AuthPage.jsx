@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { HeartPulse, ArrowRight, UserPlus, LogIn, AlertCircle, Loader2 } from 'lucide-react';
+import { HeartPulse, ArrowRight, ArrowLeft, UserPlus, LogIn, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../../../services/supabaseClient';
 
 const ESTADOS_VENEZUELA = [
@@ -102,11 +102,20 @@ export default function AuthPage() {
 
   return (
     <div className="auth-container">
-      <div className="auth-nav">
+      <div className="auth-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+        <button 
+          onClick={() => navigate('/')} 
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#4b5563' }}
+          className="back-btn"
+        >
+          <ArrowLeft size={24} />
+          <span style={{ marginLeft: '8px', fontWeight: '500' }}>Volver</span>
+        </button>
         <div className="logo-container cursor-pointer" onClick={() => navigate('/')}>
           <HeartPulse className="logo-icon" size={28} />
           <span className="logo-text">Manos de Vuelta</span>
         </div>
+        <div style={{ width: '80px' }}></div> {/* Spacer to center logo */}
       </div>
 
       <div className="auth-content">

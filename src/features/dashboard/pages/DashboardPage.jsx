@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   HeartPulse, LayoutDashboard, PlusCircle, HandHeart,
-  Search, LogOut, Package, X, Loader2, AlertCircle, MapPin, Phone
+  Search, LogOut, Package, X, Loader2, AlertCircle, MapPin, Phone,
+  Trash2, Edit2
 } from 'lucide-react';
 import { supabase } from '../../../services/supabaseClient';
 
@@ -31,15 +32,16 @@ export default function DashboardPage({ session }) {
   const [profile, setProfile] = useState(null);
   
   // Navigation state
-  const [activeView, setActiveView] = useState('inicio'); // 'inicio' | 'explorar'
+  const [activeView, setActiveView] = useState('inicio'); // 'inicio' | 'explorar' | 'mis-publicaciones'
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState('need'); // 'need' | 'donate'
+  const [modalType, setModalType] = useState('solicitud'); // 'solicitud' | 'donacion'
   const [formData, setFormData] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [editingId, setEditingId] = useState(null);
 
   // Fetch profile
   useEffect(() => {
@@ -103,12 +105,44 @@ export default function DashboardPage({ session }) {
     navigate('/');
   };
 
-  // Open modal
+  // Open modal for new
   const openModal = (type) => {
     setModalType(type);
     setFormData(emptyForm);
+    setEditingId(null);
     setFormError('');
     setModalOpen(true);
+  };
+
+  // Open modal for edit
+  const handleEdit = (item) => {
+    setModalType(item.type);
+    setFormData({
+      title: item.title, description: item.description, category: item.category,
+      quantity: item.quantity, urgency: item.urgency, state: item.state, municipality: item.municipality
+    });
+    setEditingId(item.id);
+    setFormError('');
+    setModalOpen(true);
+  };
+
+  // Delete
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Seguro que deseas eliminar esta publicación?")) return;
+    const { error } = await supabase.from('supplies').delete().eq('id', id);
+    if (!error) fetchSupplies();
+  };
+
+  const handleContact = (item) => {
+    if (!item.profile?.phone_number) {
+      alert('Este usuario no tiene un número de teléfono registrado.');
+      return;
+    }
+    const phone = item.profile.phone_number.replace(/\D/g, '');
+    let text = item.type === 'solicitud' 
+      ? `Hola, vi tu solicitud de "${item.title}" en Manos de Vuelta. Quiero ayudar.`
+      : `Hola, vi tu donación de "${item.title}" en Manos de Vuelta. Me interesa.`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   // Form change
@@ -123,18 +157,35 @@ export default function DashboardPage({ session }) {
     setSubmitting(true);
     setFormError('');
 
-    const { error } = await supabase.from('supplies').insert({
-      user_id: session.user.id,
-      type: modalType,
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      quantity: formData.quantity,
-      urgency: formData.urgency,
-      state: formData.state,
-      municipality: formData.municipality,
-      is_resolved: false,
-    });
+    let error;
+
+    if (editingId) {
+      const { error: updateError } = await supabase.from('supplies').update({
+        type: modalType,
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        quantity: formData.quantity,
+        urgency: formData.urgency,
+        state: formData.state,
+        municipality: formData.municipality,
+      }).eq('id', editingId);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from('supplies').insert({
+        user_id: session.user.id,
+        type: modalType,
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        quantity: formData.quantity,
+        urgency: formData.urgency,
+        state: formData.state,
+        municipality: formData.municipality,
+        is_resolved: false,
+      });
+      error = insertError;
+    }
 
     if (error) {
       // Mostrar detalle del error de Supabase para facilitar debugging
@@ -167,7 +218,7 @@ export default function DashboardPage({ session }) {
     <div className="dashboard-layout">
       {/* Sidebar */}
       <aside className="sidebar">
-        <div className="logo-container cursor-pointer" onClick={() => navigate('/')}>
+        <div className="logo-container cursor-pointer" onClick={() => setActiveView('inicio')}>
           <HeartPulse className="logo-icon" size={28} />
           <span className="logo-text">Manos de Vuelta</span>
         </div>
@@ -177,6 +228,9 @@ export default function DashboardPage({ session }) {
           </a>
           <a href="#" className={`nav-item ${activeView === 'explorar' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveView('explorar'); }}>
             <Search size={20} />Explorar Casos
+          </a>
+          <a href="#" className={`nav-item ${activeView === 'mis-publicaciones' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveView('mis-publicaciones'); }}>
+            <Package size={20} />Mis Publicaciones
           </a>
         </nav>
         <div className="sidebar-footer">
@@ -252,50 +306,50 @@ export default function DashboardPage({ session }) {
                           <span><Phone size={13} /> {item.profile.phone_number}</span>
                         )}
                       </div>
-                      <button
-                        className={`case-action-btn ${item.type === 'donacion' ? 'donate-btn' : ''}`}
-                      >
-                        {item.type === 'solicitud' ? 'Ofrecer Ayuda' : 'Contactar'}
-                      </button>
+                      <div className="case-actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                        <button className={`case-action-btn ${item.type === 'donacion' ? 'donate-btn' : ''}`} style={{ flex: 1 }} onClick={() => handleContact(item)}>
+                          {item.type === 'solicitud' ? 'Ofrecer Ayuda' : 'Contactar'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </section>
           </>
-        ) : (
+        ) : activeView === 'explorar' ? (
           <section className="explore-cases">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2>Explorar Casos</h2>
               <div className="search-bar" style={{ display: 'flex', gap: '10px', width: '300px' }}>
-                <input 
-                  type="text" 
-                  placeholder="Buscar por título o descripción..." 
+                <input
+                  type="text"
+                  placeholder="Buscar por título o descripción..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd' }}
                 />
               </div>
             </div>
-            
+
             {loadingSupplies ? (
               <div className="feed-loading">
                 <Loader2 size={28} className="spin" />
                 <p>Cargando casos...</p>
               </div>
-            ) : supplies.filter(s => 
-                s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                s.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
-              ).length === 0 ? (
+            ) : supplies.filter(s =>
+              s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              s.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
+            ).length === 0 ? (
               <div className="feed-empty">
                 <Search size={48} />
                 <p>No se encontraron casos que coincidan con tu búsqueda.</p>
               </div>
             ) : (
               <div className="cases-grid">
-                {supplies.filter(s => 
-                  s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                {supplies.filter(s =>
+                  s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                   s.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                   (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
                 ).map((item) => (
@@ -317,11 +371,58 @@ export default function DashboardPage({ session }) {
                         <span><Phone size={13} /> {item.profile.phone_number}</span>
                       )}
                     </div>
-                    <button
-                      className={`case-action-btn ${item.type === 'donacion' ? 'donate-btn' : ''}`}
-                    >
-                      {item.type === 'solicitud' ? 'Ofrecer Ayuda' : 'Contactar'}
-                    </button>
+                    <div className="case-actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                      <button className={`case-action-btn ${item.type === 'donacion' ? 'donate-btn' : ''}`} style={{ flex: 1 }} onClick={() => handleContact(item)}>
+                        {item.type === 'solicitud' ? 'Ofrecer Ayuda' : 'Contactar'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : (
+          <section className="my-publications">
+            <h2>Mis Publicaciones</h2>
+            {loadingSupplies ? (
+              <div className="feed-loading">
+                <Loader2 size={28} className="spin" />
+                <p>Cargando tus casos...</p>
+              </div>
+            ) : supplies.filter(s => s.user_id === session?.user?.id).length === 0 ? (
+              <div className="feed-empty">
+                <Package size={48} />
+                <p>Aún no has creado ninguna publicación.</p>
+              </div>
+            ) : (
+              <div className="cases-grid">
+                {supplies.filter(s => s.user_id === session?.user?.id).map((item) => (
+                  <div className="case-card" key={item.id}>
+                    <div className="case-header">
+                      <span className={`case-badge ${item.type === 'solicitud' ? 'need' : 'donate'}`}>
+                        {item.type === 'solicitud' ? 'Solicita' : 'Ofrece'}
+                      </span>
+                      <span className="case-date">{formatDate(item.created_at)}</span>
+                    </div>
+                    <h3>{item.title}</h3>
+                    <p className="case-description">{item.description}</p>
+                    {item.category && (
+                      <span className="case-category">{item.category}</span>
+                    )}
+                    <div className="case-meta">
+                      <span><MapPin size={13} /> {item.municipality}, {item.state}</span>
+                      {item.profile?.phone_number && (
+                        <span><Phone size={13} /> {item.profile.phone_number}</span>
+                      )}
+                    </div>
+                    <div className="case-actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                      <button className="case-action-btn edit-btn" onClick={() => handleEdit(item)} style={{ flex: 1, backgroundColor: '#f3f4f6', color: '#4b5563' }}>
+                        <Edit2 size={16} style={{ marginRight: '5px' }} /> Editar
+                      </button>
+                      <button className="case-action-btn delete-btn" onClick={() => handleDelete(item.id)} style={{ flex: 1, backgroundColor: '#fee2e2', color: '#ef4444' }}>
+                        <Trash2 size={16} style={{ marginRight: '5px' }} /> Eliminar
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -335,7 +436,7 @@ export default function DashboardPage({ session }) {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{modalType === 'solicitud' ? '📋 Nueva Solicitud' : '💚 Ofrecer Ayuda'}</h2>
+              <h2>{editingId ? (modalType === 'solicitud' ? '✏️ Editar Solicitud' : '✏️ Editar Donación') : (modalType === 'solicitud' ? '📋 Nueva Solicitud' : '💚 Ofrecer Ayuda')}</h2>
               <button className="modal-close" onClick={() => setModalOpen(false)}>
                 <X size={22} />
               </button>
@@ -412,7 +513,7 @@ export default function DashboardPage({ session }) {
               <button type="submit" className="auth-submit-btn" disabled={submitting}>
                 {submitting
                   ? <><Loader2 size={18} className="spin" /> Publicando...</>
-                  : modalType === 'solicitud' ? 'Publicar Solicitud' : 'Publicar Donación'
+                  : editingId ? 'Guardar Cambios' : (modalType === 'solicitud' ? 'Publicar Solicitud' : 'Publicar Donación')
                 }
               </button>
             </form>

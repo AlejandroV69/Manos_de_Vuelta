@@ -717,7 +717,9 @@ body {
   .sidebar {
     width: 100%;
     height: auto;
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 50;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
     padding: 1rem;
@@ -732,18 +734,43 @@ body {
   }
 
   .sidebar-nav {
-    display: none; /* Hide full sidebar nav on mobile, could add a hamburger menu instead */
+    display: flex;
+    flex-direction: row;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: white;
+    border-top: 1px solid var(--border-color);
+    padding: 0.5rem;
+    justify-content: space-around;
+    z-index: 50;
+    gap: 0;
+  }
+
+  .sidebar-nav .nav-item {
+    flex-direction: column;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    text-align: center;
+    gap: 0.25rem;
+    width: auto;
+    border-radius: 8px;
   }
 
   .sidebar-footer {
     margin-top: 0;
   }
 
-  /* Show a simplified bottom nav or top nav in a real app, 
-     for now we just keep the dashboard content responsive */
-     
+  .logout-btn {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    width: auto;
+    gap: 0.25rem;
+  }
+
   .dashboard-content {
-    padding: 1.5rem 1rem;
+    padding: 1.5rem 1rem 5rem 1rem; /* Added bottom padding for the fixed nav */
   }
   
   .dashboard-header {
