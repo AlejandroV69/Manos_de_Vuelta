@@ -342,8 +342,8 @@ export default function DashboardPage({ session }) {
                 <p>Cargando casos...</p>
               </div>
             ) : supplies.filter(s =>
-              s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              s.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (s.title && s.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+              (s.description && s.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
               (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
             ).length === 0 ? (
               <div className="feed-empty">
@@ -353,8 +353,8 @@ export default function DashboardPage({ session }) {
             ) : (
               <div className="cases-grid">
                 {supplies.filter(s =>
-                  s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  s.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (s.title && s.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                  (s.description && s.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
                   (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
                 ).map((item) => (
                   <div className="case-card" key={item.id}>
