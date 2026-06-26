@@ -6,9 +6,9 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../services/supabaseClient';
 
-// Categorías sugeridas (texto libre para evitar conflictos con constraints de BD)
-const CATEGORIAS_SUGERIDAS = [
-  'Medicamentos', 'Alimentos', 'Ropa', 'Higiene', 'Equipo Médico', 'Otro'
+// Categorías alineadas con el CHECK constraint de la tabla supplies en Supabase
+const CATEGORIAS = [
+  'Medicinas', 'Alimentos', 'Insumos Médicos', 'Otros'
 ];
 const URGENCIAS = ['Alta', 'Media', 'Baja'];
 const ESTADOS_VE = [
@@ -29,6 +29,10 @@ export default function DashboardPage({ session }) {
   const [supplies, setSupplies] = useState([]);
   const [loadingSupplies, setLoadingSupplies] = useState(true);
   const [profile, setProfile] = useState(null);
+  
+  // Navigation state
+  const [activeView, setActiveView] = useState('inicio'); // 'inicio' | 'explorar'
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -168,10 +172,12 @@ export default function DashboardPage({ session }) {
           <span className="logo-text">Manos de Vuelta</span>
         </div>
         <nav className="sidebar-nav">
-          <a href="#" className="nav-item active"><LayoutDashboard size={20} />Inicio</a>
-          <a href="#" className="nav-item"><Search size={20} />Explorar Casos</a>
-          <a href="#" className="nav-item"><Package size={20} />Mis Solicitudes</a>
-          <a href="#" className="nav-item"><HandHeart size={20} />Mis Donaciones</a>
+          <a href="#" className={`nav-item ${activeView === 'inicio' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveView('inicio'); }}>
+            <LayoutDashboard size={20} />Inicio
+          </a>
+          <a href="#" className={`nav-item ${activeView === 'explorar' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveView('explorar'); }}>
+            <Search size={20} />Explorar Casos
+          </a>
         </nav>
         <div className="sidebar-footer">
           <button className="nav-item logout-btn" onClick={handleLogout}>
@@ -192,68 +198,136 @@ export default function DashboardPage({ session }) {
           </div>
         </header>
 
-        {/* Quick Actions */}
-        <section className="dashboard-actions">
-          <button className="action-card btn-need" onClick={() => openModal('need')}>
-            <div className="action-icon"><PlusCircle size={32} /></div>
-            <div className="action-text">
-              <h3>Solicitar Insumo</h3>
-              <p>Crea una nueva solicitud de ayuda.</p>
-            </div>
-          </button>
-          <button className="action-card btn-donate" onClick={() => openModal('donate')}>
-            <div className="action-icon"><HandHeart size={32} /></div>
-            <div className="action-text">
-              <h3>Quiero Donar</h3>
-              <p>Publica lo que tienes disponible.</p>
-            </div>
-          </button>
-        </section>
-
-        {/* Feed */}
-        <section className="recent-cases">
-          <h2>Casos Recientes</h2>
-          {loadingSupplies ? (
-            <div className="feed-loading">
-              <Loader2 size={28} className="spin" />
-              <p>Cargando casos...</p>
-            </div>
-          ) : supplies.length === 0 ? (
-            <div className="feed-empty">
-              <HandHeart size={48} />
-              <p>Aún no hay casos publicados. ¡Sé el primero en ayudar!</p>
-            </div>
-          ) : (
-            <div className="cases-grid">
-              {supplies.map((item) => (
-                <div className="case-card" key={item.id}>
-                  <div className="case-header">
-                    <span className={`case-badge ${item.type === 'need' ? 'need' : 'donate'}`}>
-                      {item.type === 'need' ? 'Solicita' : 'Ofrece'}
-                    </span>
-                    <span className="case-date">{formatDate(item.created_at)}</span>
-                  </div>
-                  <h3>{item.title}</h3>
-                  <p className="case-description">{item.description}</p>
-                  {item.category && (
-                    <span className="case-category">{item.category}</span>
-                  )}
-                  <div className="case-meta">
-                    <span><MapPin size={13} /> {item.municipality}, {item.state}</span>
-                    {item.profile?.phone_number && (
-                      <span><Phone size={13} /> {item.profile.phone_number}</span>
-                    )}
-                  </div>
-                  <button
-                    className={`case-action-btn ${item.type === 'donate' ? 'donate-btn' : ''}`}
-                  >
-                    {item.type === 'need' ? 'Ofrecer Ayuda' : 'Contactar'}
-                  </button>
+        {activeView === 'inicio' ? (
+          <>
+            {/* Quick Actions */}
+            <section className="dashboard-actions">
+              <button className="action-card btn-need" onClick={() => openModal('solicitud')}>
+                <div className="action-icon"><PlusCircle size={32} /></div>
+                <div className="action-text">
+                  <h3>Solicitar Insumo</h3>
+                  <p>Crea una nueva solicitud de ayuda.</p>
                 </div>
-              ))}
+              </button>
+              <button className="action-card btn-donate" onClick={() => openModal('donacion')}>
+                <div className="action-icon"><HandHeart size={32} /></div>
+                <div className="action-text">
+                  <h3>Quiero Donar</h3>
+                  <p>Publica lo que tienes disponible.</p>
+                </div>
+              </button>
+            </section>
+
+            {/* Feed */}
+            <section className="recent-cases">
+              <h2>Casos Recientes</h2>
+              {loadingSupplies ? (
+                <div className="feed-loading">
+                  <Loader2 size={28} className="spin" />
+                  <p>Cargando casos...</p>
+                </div>
+              ) : supplies.length === 0 ? (
+                <div className="feed-empty">
+                  <HandHeart size={48} />
+                  <p>Aún no hay casos publicados. ¡Sé el primero en ayudar!</p>
+                </div>
+              ) : (
+                <div className="cases-grid">
+                  {supplies.map((item) => (
+                    <div className="case-card" key={item.id}>
+                      <div className="case-header">
+                        <span className={`case-badge ${item.type === 'solicitud' ? 'need' : 'donate'}`}>
+                          {item.type === 'solicitud' ? 'Solicita' : 'Ofrece'}
+                        </span>
+                        <span className="case-date">{formatDate(item.created_at)}</span>
+                      </div>
+                      <h3>{item.title}</h3>
+                      <p className="case-description">{item.description}</p>
+                      {item.category && (
+                        <span className="case-category">{item.category}</span>
+                      )}
+                      <div className="case-meta">
+                        <span><MapPin size={13} /> {item.municipality}, {item.state}</span>
+                        {item.profile?.phone_number && (
+                          <span><Phone size={13} /> {item.profile.phone_number}</span>
+                        )}
+                      </div>
+                      <button
+                        className={`case-action-btn ${item.type === 'donacion' ? 'donate-btn' : ''}`}
+                      >
+                        {item.type === 'solicitud' ? 'Ofrecer Ayuda' : 'Contactar'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        ) : (
+          <section className="explore-cases">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2>Explorar Casos</h2>
+              <div className="search-bar" style={{ display: 'flex', gap: '10px', width: '300px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Buscar por título o descripción..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd' }}
+                />
+              </div>
             </div>
-          )}
-        </section>
+            
+            {loadingSupplies ? (
+              <div className="feed-loading">
+                <Loader2 size={28} className="spin" />
+                <p>Cargando casos...</p>
+              </div>
+            ) : supplies.filter(s => 
+                s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                s.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
+              ).length === 0 ? (
+              <div className="feed-empty">
+                <Search size={48} />
+                <p>No se encontraron casos que coincidan con tu búsqueda.</p>
+              </div>
+            ) : (
+              <div className="cases-grid">
+                {supplies.filter(s => 
+                  s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                  s.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
+                ).map((item) => (
+                  <div className="case-card" key={item.id}>
+                    <div className="case-header">
+                      <span className={`case-badge ${item.type === 'solicitud' ? 'need' : 'donate'}`}>
+                        {item.type === 'solicitud' ? 'Solicita' : 'Ofrece'}
+                      </span>
+                      <span className="case-date">{formatDate(item.created_at)}</span>
+                    </div>
+                    <h3>{item.title}</h3>
+                    <p className="case-description">{item.description}</p>
+                    {item.category && (
+                      <span className="case-category">{item.category}</span>
+                    )}
+                    <div className="case-meta">
+                      <span><MapPin size={13} /> {item.municipality}, {item.state}</span>
+                      {item.profile?.phone_number && (
+                        <span><Phone size={13} /> {item.profile.phone_number}</span>
+                      )}
+                    </div>
+                    <button
+                      className={`case-action-btn ${item.type === 'donacion' ? 'donate-btn' : ''}`}
+                    >
+                      {item.type === 'solicitud' ? 'Ofrecer Ayuda' : 'Contactar'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </main>
 
       {/* Modal */}
@@ -261,7 +335,7 @@ export default function DashboardPage({ session }) {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{modalType === 'need' ? '📋 Nueva Solicitud' : '💚 Ofrecer Ayuda'}</h2>
+              <h2>{modalType === 'solicitud' ? '📋 Nueva Solicitud' : '💚 Ofrecer Ayuda'}</h2>
               <button className="modal-close" onClick={() => setModalOpen(false)}>
                 <X size={22} />
               </button>
@@ -296,18 +370,15 @@ export default function DashboardPage({ session }) {
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="category">Categoría</label>
-                  <input
+                  <select
                     id="category"
-                    type="text"
-                    list="categorias-list"
-                    placeholder="Ej. Medicamentos, Alimentos..."
                     value={formData.category}
                     onChange={handleChange}
                     required
-                  />
-                  <datalist id="categorias-list">
-                    {CATEGORIAS_SUGERIDAS.map((c) => <option key={c} value={c} />)}
-                  </datalist>
+                  >
+                    <option value="">Seleccionar...</option>
+                    {CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label htmlFor="quantity">Cantidad</label>
@@ -315,7 +386,7 @@ export default function DashboardPage({ session }) {
                 </div>
               </div>
 
-              {modalType === 'need' && (
+              {modalType === 'solicitud' && (
                 <div className="form-group">
                   <label htmlFor="urgency">Urgencia</label>
                   <select id="urgency" value={formData.urgency} onChange={handleChange} required>
@@ -341,7 +412,7 @@ export default function DashboardPage({ session }) {
               <button type="submit" className="auth-submit-btn" disabled={submitting}>
                 {submitting
                   ? <><Loader2 size={18} className="spin" /> Publicando...</>
-                  : modalType === 'need' ? 'Publicar Solicitud' : 'Publicar Donación'
+                  : modalType === 'solicitud' ? 'Publicar Solicitud' : 'Publicar Donación'
                 }
               </button>
             </form>
