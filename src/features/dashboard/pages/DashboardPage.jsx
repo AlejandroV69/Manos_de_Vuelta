@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   HeartPulse, LayoutDashboard, PlusCircle, HandHeart,
   Search, LogOut, Package, X, Loader2, AlertCircle, MapPin, Phone,
-  Trash2, Edit2
+  Trash2, Edit2, User
 } from 'lucide-react';
 import { supabase } from '../../../services/supabaseClient';
 
@@ -311,6 +311,9 @@ export default function DashboardPage({ session }) {
                         <span className="case-category">{item.category}</span>
                       )}
                       <div className="case-meta">
+                        {item.profile?.full_name && (
+                          <span style={{ color: '#374151', fontWeight: '500', marginBottom: '2px' }}><User size={13} /> {item.profile.full_name}</span>
+                        )}
                         <span><MapPin size={13} /> {item.municipality}, {item.state}</span>
                         {item.profile?.phone_number && (
                           <span><Phone size={13} /> {item.profile.phone_number}</span>
@@ -380,6 +383,9 @@ export default function DashboardPage({ session }) {
                       <span className="case-category">{item.category}</span>
                     )}
                     <div className="case-meta">
+                      {item.profile?.full_name && (
+                        <span style={{ color: '#374151', fontWeight: '500', marginBottom: '2px' }}><User size={13} /> {item.profile.full_name}</span>
+                      )}
                       <span><MapPin size={13} /> {item.municipality}, {item.state}</span>
                       {item.profile?.phone_number && (
                         <span><Phone size={13} /> {item.profile.phone_number}</span>
@@ -428,6 +434,9 @@ export default function DashboardPage({ session }) {
                       <span className="case-category">{item.category}</span>
                     )}
                     <div className="case-meta">
+                      {item.profile?.full_name && (
+                        <span style={{ color: '#374151', fontWeight: '500', marginBottom: '2px' }}><User size={13} /> {item.profile.full_name}</span>
+                      )}
                       <span><MapPin size={13} /> {item.municipality}, {item.state}</span>
                       {item.profile?.phone_number && (
                         <span><Phone size={13} /> {item.profile.phone_number}</span>
