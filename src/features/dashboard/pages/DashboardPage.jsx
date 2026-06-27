@@ -477,12 +477,12 @@ export default function DashboardPage({ session }) {
               </div>
 
               <div className="form-group">
-                <label htmlFor="description">Descripción</label>
+                <label htmlFor="description">Descripción (Opcional)</label>
                 <textarea
                   id="description"
                   placeholder="Explica el caso con más detalle..."
                   value={formData.description} onChange={handleChange}
-                  required rows={3}
+                  rows={3}
                 />
               </div>
 
